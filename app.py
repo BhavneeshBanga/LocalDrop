@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, send_from_directory
 import os
+import socket
+import qrcode
 
 app = Flask(__name__)
 
@@ -7,6 +9,26 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+def get_lan_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+def print_qr_in_terminal(url):
+    qr = qrcode.QRCode(border=1)
+    qr.add_data(url)
+    qr.make(fit=True)
+    print("\n" + "="*50)
+    print(f"  📱 Scan this QR to open on mobile:")
+    print(f"  🔗 {url}")
+    print("="*50 + "\n")
+    qr.print_ascii(invert=True)
 
 @app.route('/')
 def index():
@@ -46,5 +68,8 @@ def download_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
 if __name__ == '__main__':
-    # Run on all network interfaces so mobile can access
-    app.run(host='0.0.0.0', port=5173, debug=True)
+    PORT = 5173
+    lan_ip = get_lan_ip()
+    url = f"http://{lan_ip}:{PORT}"
+    print_qr_in_terminal(url)
+    app.run(host='0.0.0.0', port=PORT, debug=True)
